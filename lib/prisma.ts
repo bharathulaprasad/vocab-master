@@ -1,21 +1,23 @@
-// Use the official generated client package
-import { PrismaClient } from '../prisma/generated/prisma'
-import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3'
-
-const prismaClientSingleton = () => {
-  // Pass the local database file directly into the adapter
-  const adapter = new PrismaBetterSqlite3({ url: 'file:./dev.db' })
-  
-  // Wrap the adapter in the Prisma Client
-  return new PrismaClient({ adapter })
+import { PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { Pool } from 'pg';
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString) {
+  throw new Error('DATABASE_URL is not set. Please check your .env file.');
 }
+const pool = new Pool({ connectionString });
+const adapter = new PrismaPg(pool);
+
+const prismaClientSingleton = () => new PrismaClient({ adapter });
 
 declare const globalThis: {
-  prismaGlobal: ReturnType<typeof prismaClientSingleton>;
+  prisma: ReturnType<typeof prismaClientSingleton> | undefined;
 } & typeof global;
 
-const prisma = globalThis.prismaGlobal ?? prismaClientSingleton()
+const prisma = globalThis.prisma ?? prismaClientSingleton();
 
-export default prisma
+export default prisma;
 
-if (process.env.NODE_ENV !== 'production') globalThis.prismaGlobal = prisma
+if (process.env.NODE_ENV !== 'production') {
+  globalThis.prisma = prisma;
+}
